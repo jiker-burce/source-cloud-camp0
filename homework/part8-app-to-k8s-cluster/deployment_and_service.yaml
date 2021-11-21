@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: high-available-http-server-dep
+  name: high-available-http-server-dep
+spec:
+  replicas: 3 # 至少3个副本，形成高可用集群
+  selector:
+    matchLabels:
+      app: high-available-http-server-pod
+  template:
+    metadata:
+      labels:
+        app: high-available-http-server-pod
+    spec:
+      containers:
+        - name: simple-http-server
+          image: storefeegmail/httpserver:v1.0.1 # 直接引用上次作业的项目代码镜像；配置和代码分离
+          ports:
+            - containerPort: 9090
+          startupProbe: # 探测应用是否启动完成，如果在 failureThreshold*periodSeconds 周期内未就绪，则会应用进程会被重启。
+            failureThreshold: 10
+              httpGet:
+                path: /healthz
+                port: 9090
+            initialDelaySeconds: 20
+            periodSeconds: 5
+          livenessProbe: # 探测应用是否处于健康状态，如果不健康则删除并重新创建容器。
+            httpGet:
+              path: /healthz
+              port: 9090
+            initialDelaySeconds: 30 # 告诉 kubelet 在执行第一次探测前应该等待 30 秒
+            periodSeconds: 30       # 指定 kubelet 每隔 30 秒执行一次存活探测
+            successThreshold: 1     # 探测器在失败后，被视为成功的最小连续成功数
+            failureThreshold: 3     # 当探测失败时，Kubernetes 的重试次数
+          resources:
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+            requests:
+              cpu: "100m"
+              memory: "100Mi"
+          volumeMounts: # 日志
+            - name: log-vol
+              mountPath: /c-logs
+        restartPolicy: Always
+        volumes:
+          - name: log-vol
+            hostPath:
+              path: /data/logs/high-available-http-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: high-available-http-server-svc
+spec:
+  selector:
+    app: high-available-http-server-pod
+  ports:
+    - protocol: TCP
+      port: 9090
+      targetPort: 9090
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: high-available-http-server-ingress
+  labels:
+    name: high-available-http-server-ingress
+spec:
+  rules:
+    - host: svc.http-service.test
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: high-available-http-server-svc
+                port:
+                  number: 9090
