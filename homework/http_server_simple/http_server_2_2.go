@@ -1,11 +1,14 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"github.com/golang/glog"
 	"github.com/thinkeridea/go-extend/exnet"
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 func healthZ(w http.ResponseWriter, r *http.Request) {
@@ -30,9 +33,29 @@ func full(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(returnCode)
 }
 
+/**
+启动时通过 -log_dir=log 指定目录，但是log目录必须存在
+*/
+func logs(w http.ResponseWriter, r *http.Request) {
+	defer glog.Flush()
+	//flag.Lookup("logtostderr").Value.Set("true")
+	//currentPath, _ := os.Getwd()
+	//flag.Lookup("log_dir").Value.Set(currentPath + "/log")
+	flag.Parse()
+	fmt.Print("log_dir:", flag.Lookup("log_dir").Value)
+
+	now := time.Now().Format("2006-01-02 15:04:05")
+	ip := exnet.ClientIP(r)
+	statusCode := http.StatusOK
+	w.Header().Add("statusCode", "200")
+	path := r.RequestURI
+	glog.V(2).Infof("%s\t%s\t%s\t%d", now, ip, path, statusCode)
+}
+
 func main() {
 	http.HandleFunc("/healthz", healthZ) // 心跳健康检查
 	http.HandleFunc("/full", full)       // 全量信息
+	http.HandleFunc("/logs", logs)       // 打印日志
 
 	err := http.ListenAndServe(":9090", nil) // 设置监听的端口
 

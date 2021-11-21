@@ -1,4 +1,4 @@
-export tag=v1.0
+export tag=v1.0.1
 root:
 	export ROOT=github.com/bruce-gu/golang
 
@@ -13,4 +13,4 @@ release: build
 
 push: release
 	echo "pushing storefeegmail/httpserver"
-	docker push storefeegmail/httpserver:v1.0
+	docker push storefeegmail/httpserver:${tag}
