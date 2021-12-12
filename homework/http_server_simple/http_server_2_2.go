@@ -1,11 +1,13 @@
 package main
 
 import (
+	"20210221practice/src/cncamp/homework/http_server_simple/metrics"
 	"flag"
 	"fmt"
 	"github.com/golang/glog"
 	"github.com/thinkeridea/go-extend/exnet"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"time"
@@ -52,10 +54,28 @@ func logs(w http.ResponseWriter, r *http.Request) {
 	glog.V(2).Infof("%s\t%s\t%s\t%d", now, ip, path, statusCode)
 }
 
+func randInt(min int, max int) int {
+	rand.Seed(time.Now().UTC().UnixNano())
+	return min + rand.Intn(max-min)
+}
+
+func randTimeout(w http.ResponseWriter, r *http.Request){
+	glog.V(4).Info("Random timeout")
+
+	timer := metrics.NewTimer()
+	defer timer.ObserveTotal()
+
+	delayInt := randInt(10, 2000)
+
+	time.Sleep(time.Millisecond * time.Duration(delayInt))
+	glog.V(4).Infof("Timeout in %d ms", delayInt)
+}
+
 func main() {
 	http.HandleFunc("/healthz", healthZ) // 心跳健康检查
 	http.HandleFunc("/full", full)       // 全量信息
 	http.HandleFunc("/logs", logs)       // 打印日志
+	http.HandleFunc("/randTimeout", logs)       // 为 HTTPServer 添加 0-2 秒的随机延时
 
 	err := http.ListenAndServe(":9090", nil) // 设置监听的端口
 
