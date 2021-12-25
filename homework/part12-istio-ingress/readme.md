@@ -37,4 +37,4 @@
     [root@k8s-master part12-istio-ingress]# curl --resolve httpserver.cncamp.com:443:$INGRESS_IP https://httpserver.cncamp.com.com/service/healthz -v -k
     ```
 ### curl 访问结果
-[image](./curl_istio.jpg)
+![image](./curl_istio.jpg)
